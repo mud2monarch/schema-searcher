@@ -1,5 +1,5 @@
 /target
-service_account_creds.json
+zw_personal_service_acc.json
 *.txt
 .env
 Cargo.lock

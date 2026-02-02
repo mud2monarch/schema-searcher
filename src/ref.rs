@@ -95,7 +95,6 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     env_logger::init();
     info!("Starting application");
 
@@ -260,7 +259,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 9/28 don't think this needs to be mutably borrowed?
     for table in &mut all_tables {
         let url: String = format!(
-            "https://bigquery.googleapis.com/bigquery/v2/projects/{}/datasets/{}/tables/{}",
+            https://bigquery.googleapis.com/bigquery/v2/projects/{}/datasets/{}/tables/{}",
             table.tableReference.projectId,
             table.tableReference.datasetId,
             table.tableReference.tableId
