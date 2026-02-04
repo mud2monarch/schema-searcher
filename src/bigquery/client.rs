@@ -1,3 +1,5 @@
+use futures::future::try_join_all;
+#[allow(unused_imports)]
 use log::info;
 use reqwest::Client;
 use yup_oauth2::read_service_account_key;
@@ -65,6 +67,19 @@ pub async fn get_tables(
         .into_iter()
         .map(|table| table.table_reference)
         .collect();
+
+    Ok(tables)
+}
+
+pub async fn list_project_tables(
+    client: &Client,
+    project_id: &str,
+) -> Result<Vec<TableReference>, Box<dyn std::error::Error>> {
+    let datasets = get_datasets(client, project_id).await?;
+
+    let futures = datasets.iter().map(|dataset| get_tables(client, dataset));
+
+    let tables = try_join_all(futures).await?.into_iter().flatten().collect();
 
     Ok(tables)
 }

@@ -1,8 +1,11 @@
+#![allow(unused_imports)]
+
 use log::info;
 use schema_searcher::bigquery::{
-    client::{authenticate, get_datasets, get_tables},
+    client::{authenticate, get_datasets, list_project_tables},
     types::DatasetList,
 };
+use std::time::Instant;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let project = "bigquery-public-data";
 
-    let tables = get_datasets(&client, project).await.unwrap();
+    let tables = list_project_tables(&client, project).await.unwrap();
 
     println!("{:?}", tables);
 
