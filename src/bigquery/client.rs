@@ -4,7 +4,9 @@ use log::info;
 use reqwest::Client;
 use yup_oauth2::read_service_account_key;
 
-use crate::bigquery::types::{DatasetList, DatasetReference, TableList, TableReference};
+use crate::bigquery::types::{
+    Column, DatasetList, DatasetReference, Table, TableList, TableReference,
+};
 
 pub async fn authenticate(creds_path: &str) -> Result<Client, Box<dyn std::error::Error>> {
     // GBQ authentication and Reqwest client boilerplate
@@ -33,7 +35,12 @@ pub async fn authenticate(creds_path: &str) -> Result<Client, Box<dyn std::error
     Ok(client)
 }
 
-pub async fn get_datasets(
+// FYI here is the flow of the BigQuery API:
+// method: dataset.list (projectID) -> Vec<Dataset>; Dataset contains a DatasetReference.
+// method: table.list (projectID and a datasetID) -> Vec<Table>; Table contains a TableReference.
+// method: table.get (projectID, datasetID, tableID) -> Schema
+
+pub async fn list_project_datasets(
     client: &Client,
     project_id: &str,
 ) -> Result<Vec<DatasetReference>, Box<dyn std::error::Error>> {
@@ -43,7 +50,7 @@ pub async fn get_datasets(
     );
     let response = client.get(&url).send().await?.json::<DatasetList>().await?;
 
-    let datasets = response
+    let datasets: Vec<DatasetReference> = response
         .datasets
         .into_iter()
         .map(|dataset| dataset.dataset_reference)
@@ -52,7 +59,7 @@ pub async fn get_datasets(
     Ok(datasets)
 }
 
-pub async fn get_tables(
+pub async fn list_dataset_tables(
     client: &Client,
     dataset: &DatasetReference,
 ) -> Result<Vec<TableReference>, Box<dyn std::error::Error>> {
@@ -75,11 +82,41 @@ pub async fn list_project_tables(
     client: &Client,
     project_id: &str,
 ) -> Result<Vec<TableReference>, Box<dyn std::error::Error>> {
-    let datasets = get_datasets(client, project_id).await?;
+    let datasets = list_project_datasets(client, project_id).await?;
 
-    let futures = datasets.iter().map(|dataset| get_tables(client, dataset));
+    let futures = datasets
+        .iter()
+        .map(|dataset| list_dataset_tables(client, dataset));
 
+    // TODO: Use join_all and flatten. don't need to mass fail on one api call here.
     let tables = try_join_all(futures).await?.into_iter().flatten().collect();
 
     Ok(tables)
+}
+
+pub async fn get_table_columns(
+    client: &Client,
+    table_id: &TableReference,
+) -> Result<Vec<Column>, Box<dyn std::error::Error>> {
+    let url = format!(
+        "https://bigquery.googleapis.com/bigquery/v2/projects/{}/datasets/{}/tables/{}",
+        table_id.project_id, table_id.dataset_id, table_id.table_id
+    );
+
+    let table: Table = client.get(&url).send().await?.json::<Table>().await?;
+
+    let columns: Vec<Column> = table
+        .schema
+        .ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!(
+                    "BQ method: table.get did not return a schema for {:?}",
+                    table_id
+                ),
+            ))
+        })?
+        .fields;
+
+    Ok(columns)
 }

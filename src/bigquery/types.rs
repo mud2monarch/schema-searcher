@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+// TODO: I'm pretty sure I never need to serialize because I'm only ever reading from the BQ API.
+
 // Defining serde structs for GET(dataset.list) response.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DatasetList {
@@ -20,7 +22,6 @@ pub struct DatasetReference {
     pub dataset_id: String,
 }
 
-// Defining serde structs for GET(tables.list) response.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TableList {
     pub tables: Vec<Table>,
@@ -30,8 +31,8 @@ pub struct TableList {
 pub struct Table {
     #[serde(rename = "tableReference")]
     pub table_reference: TableReference,
-    #[serde(skip)]
-    pub schema: Option<Vec<Column>>,
+    // Note: this must be an Option because table.list returns a Table-like type that doesn't contain a schema.
+    pub schema: Option<Schema>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,12 +46,7 @@ pub struct TableReference {
     pub table_id: String,
 }
 
-// Defining serde structs for GET(tables.get) response.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TableGet {
-    pub schema: Schema,
-}
-
+// intermediate type that typically passes through to Column
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Schema {
     pub fields: Vec<Column>,
