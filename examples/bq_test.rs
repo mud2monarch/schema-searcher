@@ -1,19 +1,26 @@
 #![allow(unused_imports)]
 
+use clap::Parser;
 use futures::future::join_all;
 use log::{info, warn};
-use schema_searcher::bigquery::{
-    client::{authenticate, get_table_columns, list_project_datasets, list_project_tables},
-    types::DatasetList,
+use schema_searcher::{
+    bigquery::{
+        client::{authenticate, get_table_columns, list_project_datasets, list_project_tables},
+        types::DatasetList,
+    },
+    io::cli,
 };
 use std::time::Instant;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    let client = authenticate("zw_personal_service_acc.json").await?;
+    let args = cli::Args::parse();
+    let creds_path: &str = args.creds_path.as_str();
+    // let output_file_path: &str = args.output_file.as_str();
+    let project = args.project.as_str();
 
-    let project = "bigquery-public-data";
+    let client = authenticate(creds_path).await?;
 
     let tables = list_project_tables(&client, project).await.unwrap();
 

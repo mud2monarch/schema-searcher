@@ -1,5 +1,5 @@
 /target
-zw_personal_service_acc.json
+*.json
 *.txt
 .env
 Cargo.lock
