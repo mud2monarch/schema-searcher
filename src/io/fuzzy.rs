@@ -15,7 +15,7 @@ pub fn collect_tables(tables: Vec<TableReference>) -> Vec<TableReference> {
         .height(String::from("80%"))
         .multi(true)
         .header(Some(String::from(
-            "Select tables. Use tab/shift-tab to add/remove items.",
+            "Select tables. Use tab/shift-tab to add/remove items. Press Enter to confirm.",
         )))
         .build()
         .unwrap();

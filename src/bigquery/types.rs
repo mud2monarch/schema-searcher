@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 // Defining serde structs for GET(dataset.list) response.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DatasetList {
+    #[serde(default)]
     pub datasets: Vec<Dataset>,
 }
 
@@ -24,6 +25,7 @@ pub struct DatasetReference {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TableList {
+    #[serde(default)]
     pub tables: Vec<Table>,
 }
 

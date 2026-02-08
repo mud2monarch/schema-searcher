@@ -1,4 +1,5 @@
 use clap::Parser;
+use log::info;
 use schema_searcher::{
     bigquery::client::{authenticate, get_tables, list_project_tables},
     io::writer::write_table,
@@ -15,6 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project = args.project.as_str();
 
     let client = authenticate(creds_path).await?;
+    info!("Finished authentication");
 
     let table_names = list_project_tables(&client, project).await.unwrap();
 
