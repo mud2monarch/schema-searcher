@@ -1,43 +1,39 @@
-#![allow(unused_imports)]
-
 use clap::Parser;
-use futures::future::join_all;
-use log::{info, warn};
 use schema_searcher::{
-    bigquery::{
-        client::{authenticate, get_table_columns, list_project_datasets, list_project_tables},
-        types::DatasetList,
-    },
+    bigquery::client::{authenticate, get_tables, list_project_tables},
+    io::writer::write_table,
     io::{cli, fuzzy},
 };
-use std::time::Instant;
+use std::fs::File;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let args = cli::Args::parse();
     let creds_path: &str = args.creds_path.as_str();
-
+    let output_path: &str = args.output_path.as_str();
     let project = args.project.as_str();
 
     let client = authenticate(creds_path).await?;
 
-    let tables = list_project_tables(&client, project).await.unwrap();
+    let table_names = list_project_tables(&client, project).await.unwrap();
 
-    let desired_tables = tokio::task::spawn_blocking(move || fuzzy::collect_tables(tables)).await?;
+    let desired_tables =
+        tokio::task::spawn_blocking(move || fuzzy::collect_tables(table_names)).await?;
 
-    for table in desired_tables {
-        println!("Table: {:?}", table);
+    let tables_w_schemas = get_tables(&client, &desired_tables).await?;
+
+    let mut output_file = File::create(output_path).expect("Failed to create output file");
+
+    for table in tables_w_schemas {
+        if let Err(err) = write_table(&mut output_file, &table) {
+            eprintln!(
+                "Failed to write table {}: {}",
+                table.table_reference.to_str(),
+                err
+            );
+        }
     }
-    // let futures = tables.iter().map(|table| get_table_columns(&client, table));
-    // let results = join_all(futures).await;
 
-    // for result in results.into_iter().take(5) {
-    //     match result {
-    //         Ok(columns) => info!("Columns: {:?}", columns),
-    //         Err(err) => warn!("Error: {}", err),
-    //     }
-    // }
-    std::process::exit(0);
     Ok(())
 }

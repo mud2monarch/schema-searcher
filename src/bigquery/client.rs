@@ -1,6 +1,6 @@
-use futures::future::try_join_all;
+use futures::future::{join_all, try_join_all};
 #[allow(unused_imports)]
-use log::info;
+use log::{info, warn};
 use reqwest::Client;
 use yup_oauth2::read_service_account_key;
 
@@ -40,7 +40,7 @@ pub async fn authenticate(creds_path: &str) -> Result<Client, Box<dyn std::error
 // method: table.list (projectID and a datasetID) -> Vec<Table>; Table contains a TableReference.
 // method: table.get (projectID, datasetID, tableID) -> Schema
 
-pub async fn list_project_datasets(
+async fn list_project_datasets(
     client: &Client,
     project_id: &str,
 ) -> Result<Vec<DatasetReference>, Box<dyn std::error::Error>> {
@@ -59,7 +59,7 @@ pub async fn list_project_datasets(
     Ok(datasets)
 }
 
-pub async fn list_dataset_tables(
+async fn list_dataset_tables(
     client: &Client,
     dataset: &DatasetReference,
 ) -> Result<Vec<TableReference>, Box<dyn std::error::Error>> {
@@ -94,10 +94,10 @@ pub async fn list_project_tables(
     Ok(tables)
 }
 
-pub async fn get_table_columns(
+async fn get_table(
     client: &Client,
     table_id: &TableReference,
-) -> Result<Vec<Column>, Box<dyn std::error::Error>> {
+) -> Result<Table, Box<dyn std::error::Error>> {
     let url = format!(
         "https://bigquery.googleapis.com/bigquery/v2/projects/{}/datasets/{}/tables/{}",
         table_id.project_id, table_id.dataset_id, table_id.table_id
@@ -105,18 +105,26 @@ pub async fn get_table_columns(
 
     let table: Table = client.get(&url).send().await?.json::<Table>().await?;
 
-    let columns: Vec<Column> = table
-        .schema
-        .ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "BQ method: table.get did not return a schema for {:?}",
-                    table_id
-                ),
-            ))
-        })?
-        .fields;
+    Ok(table)
+}
 
-    Ok(columns)
+pub async fn get_tables(
+    client: &Client,
+    table_ids: &Vec<TableReference>,
+) -> Result<Vec<Table>, Box<dyn std::error::Error>> {
+    let futures = table_ids.into_iter().map(|table| get_table(client, table));
+
+    let tables = join_all(futures)
+        .await
+        .into_iter()
+        .filter_map(|table| match table {
+            Ok(table) => Some(table),
+            Err(err) => {
+                warn!("Failed to get table: {}", err);
+                None
+            }
+        })
+        .collect::<Vec<Table>>();
+
+    Ok(tables)
 }

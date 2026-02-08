@@ -14,5 +14,5 @@ pub struct Args {
     /// The filepath to which to write the final output file.
     /// Defaults to "tables.txt" in the current working directory.
     #[arg(short, long, default_value = "tables.txt")]
-    pub output_file: String,
+    pub output_path: String,
 }
