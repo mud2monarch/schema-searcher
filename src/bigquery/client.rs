@@ -4,9 +4,7 @@ use log::{info, warn};
 use reqwest::Client;
 use yup_oauth2::read_service_account_key;
 
-use crate::bigquery::types::{
-    Column, DatasetList, DatasetReference, Table, TableList, TableReference,
-};
+use crate::bigquery::types::{DatasetList, DatasetReference, Table, TableList, TableReference};
 
 pub async fn authenticate(creds_path: &str) -> Result<Client, Box<dyn std::error::Error>> {
     // GBQ authentication and Reqwest client boilerplate
@@ -112,7 +110,7 @@ pub async fn get_tables(
     client: &Client,
     table_ids: &Vec<TableReference>,
 ) -> Result<Vec<Table>, Box<dyn std::error::Error>> {
-    let futures = table_ids.into_iter().map(|table| get_table(client, table));
+    let futures = table_ids.iter().map(|table| get_table(client, table));
 
     let tables = join_all(futures)
         .await

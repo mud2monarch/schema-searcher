@@ -51,6 +51,7 @@ impl TableReference {
         format!("{}.{}.{}", self.project_id, self.dataset_id, self.table_id)
     }
 
+    // note: not an impl of FromStr
     pub fn from_str(s: &str) -> Result<Self, String> {
         let parts: Vec<&str> = s.split('.').collect();
         if parts.len() != 3 {
