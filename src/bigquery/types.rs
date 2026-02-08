@@ -46,6 +46,25 @@ pub struct TableReference {
     pub table_id: String,
 }
 
+impl TableReference {
+    pub fn to_str(&self) -> String {
+        format!("{}.{}.{}", self.project_id, self.dataset_id, self.table_id)
+    }
+
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        let parts: Vec<&str> = s.split('.').collect();
+        if parts.len() != 3 {
+            Err(format!("Invalid table reference: {}", s))
+        } else {
+            Ok(TableReference {
+                project_id: parts[0].to_string(),
+                dataset_id: parts[1].to_string(),
+                table_id: parts[2].to_string(),
+            })
+        }
+    }
+}
+
 // intermediate type that typically passes through to Column
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Schema {
