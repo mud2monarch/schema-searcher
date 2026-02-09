@@ -1,24 +1,35 @@
-use clap::Parser;
-use log::info;
+use colorize::AnsiColor;
+use inquire::Text;
 use schema_searcher::{
     bigquery::client::{authenticate, get_tables, list_project_tables},
+    io::fuzzy,
     io::writer::write_table,
-    io::{cli, fuzzy},
 };
 use std::fs::File;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    let args = cli::Args::parse();
-    let creds_path: &str = args.creds_path.as_str();
-    let output_path: &str = args.output_path.as_str();
-    let project = args.project.as_str();
 
-    let client = authenticate(creds_path).await?;
-    info!("Finished authentication");
+    let creds_path = Text::new("Enter your credentials path".yellow().as_str())
+        .with_default("service_account_creds.json")
+        .prompt()?;
+    let project_id = Text::new("Enter your project ID".yellow().as_str())
+        .with_default("bigquery-public-data")
+        .prompt()?;
+    let output_path = Text::new(
+        "What would you like the output file to be called?"
+            .yellow()
+            .as_str(),
+    )
+    .with_default("tables.txt")
+    .prompt()?;
 
-    let table_names = list_project_tables(&client, project).await.unwrap();
+    let client = authenticate(creds_path.as_str()).await?;
+
+    let table_names = list_project_tables(&client, project_id.as_str())
+        .await
+        .unwrap();
 
     let desired_tables =
         tokio::task::spawn_blocking(move || fuzzy::collect_tables(table_names)).await?;
