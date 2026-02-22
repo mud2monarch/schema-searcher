@@ -48,9 +48,19 @@ pub struct TableReference {
     pub table_id: String,
 }
 
+impl std::fmt::Display for TableReference {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}.{}.{}",
+            self.project_id, self.dataset_id, self.table_id
+        )
+    }
+}
+
 impl TableReference {
     pub fn to_str(&self) -> String {
-        format!("{}.{}.{}", self.project_id, self.dataset_id, self.table_id)
+        self.to_string()
     }
 
     // note: not an impl of FromStr
